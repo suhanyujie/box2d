@@ -3,7 +3,7 @@
 
 ## 一些其他不错的 fork
 * https://github.com/hulkholden/box2d
-* 原始仓库 https://github.com/ByteArena/box2d
 
 ## ref
+* 原始仓库 https://github.com/ByteArena/box2d
 * 新增后端碰撞计算开关 https://github.com/genxium/DelayNoMore
