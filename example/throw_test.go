@@ -35,12 +35,13 @@ func SetBody1(world *box2d.B2World) *box2d.B2Body {
 
 func SetBody2InWorld(world *box2d.B2World) *box2d.B2Body {
 	bodyDef := box2d.NewB2BodyDef() // 刚体实例化
-	bodyDef.Type = box2d.B2BodyType.B2_dynamicBody
+	// bodyDef.Type = box2d.B2BodyType.B2_dynamicBody
+	bodyDef.Type = box2d.B2BodyType.B2_kinematicBody
 	bodyDef.Position.Set(0., 4.)
 	body := world.CreateBody(bodyDef)
 
 	dynBox := box2d.NewB2PolygonShape()
-	dynBox.SetAsBox(1., 1.)
+	dynBox.SetAsBox(10., 10.)
 
 	fixDef := box2d.NewB2Fixture()
 	// 密度
@@ -64,12 +65,12 @@ func SetBody2InWorld(world *box2d.B2World) *box2d.B2Body {
 
 func SetBody3InWorld(world *box2d.B2World) *box2d.B2Body {
 	bodyDef := box2d.NewB2BodyDef() // 刚体实例化
-	bodyDef.Type = box2d.B2BodyType.B2_dynamicBody
+	bodyDef.Type = box2d.B2BodyType.B2_kinematicBody
 	bodyDef.Position.Set(0., 0.)
 	body := world.CreateBody(bodyDef)
 
 	dynBox := box2d.NewB2PolygonShape()
-	dynBox.SetAsBox(2., 2.)
+	dynBox.SetAsBox(15., 15.)
 
 	fixDef := box2d.NewB2Fixture()
 	// 密度
@@ -87,7 +88,7 @@ func SetBody3InWorld(world *box2d.B2World) *box2d.B2Body {
 
 	body.SetLinearVelocity(box2d.B2Vec2{
 		X: 0,
-		Y: 20,
+		Y: 100,
 	})
 
 	return body
@@ -118,14 +119,25 @@ func TestHelloWorld1(t *testing.T) {
 		// positionIterations 是对位置的纠正程度, 越高计算量越大.
 		var positionIterations = 2
 		world.Step(timeStep, velocityIterations, positionIterations)
-		world.ClearForces()
+		// world.ClearForces()
 	}
 	for i := 0; i < 1000; i++ {
 		animate()
 
+		bodys := world.GetBodyList()
+		list := bodys.M_fixtureList
+		for body := list.GetBody(); body != nil; body = body.GetNext() {
+			body.SetTransform(body.GetPosition(), body.GetAngle())
+			for cc := body.GetContactList(); cc != nil; cc = cc.Next {
+				fmt.Printf("body v: %v \n", cc.Contact)
+			}
+			fmt.Printf("body x, %v, y: %v \n", body.GetPosition().X, body.GetPosition().Y)
+		}
+
 		for cnArr := world.GetContactList(); cnArr != nil; cnArr.GetNext() {
 			bodyA := cnArr.GetFixtureA()
 			bodyB := cnArr.GetFixtureB()
+
 			ta := bodyA.GetBody().GetTransform()
 			tb := bodyB.GetBody().GetTransform()
 			touching := box2d.B2TestOverlapShapes(bodyA.M_shape, cnArr.GetChildIndexA(), bodyB.M_shape, cnArr.GetChildIndexB(), ta, tb)
