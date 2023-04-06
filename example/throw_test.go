@@ -20,6 +20,7 @@ func GetWorld() *box2d.B2World {
 func SetBody1(world *box2d.B2World) *box2d.B2Body {
 	bodyDef := box2d.NewB2BodyDef() // 刚体实例化
 	bodyDef.Type = box2d.B2BodyType.B2_dynamicBody
+	bodyDef.Awake = true
 	fixDef := box2d.NewB2Fixture()
 	fixDef.SetDensity(1.0)
 	fixDef.SetFriction(0.9)
@@ -35,10 +36,14 @@ func SetBody1(world *box2d.B2World) *box2d.B2Body {
 
 func SetBody2InWorld(world *box2d.B2World) *box2d.B2Body {
 	bodyDef := box2d.NewB2BodyDef() // 刚体实例化
-	// bodyDef.Type = box2d.B2BodyType.B2_dynamicBody
-	bodyDef.Type = box2d.B2BodyType.B2_kinematicBody
+	bodyDef.Type = box2d.B2BodyType.B2_dynamicBody
+	//bodyDef.Type = box2d.B2BodyType.B2_kinematicBody
+	bodyDef.Awake = true
 	bodyDef.Position.Set(0., 4.)
 	body := world.CreateBody(bodyDef)
+	mass := box2d.NewMassData()
+	mass.Mass = 10
+	body.SetMassData(mass)
 
 	dynBox := box2d.NewB2PolygonShape()
 	dynBox.SetAsBox(10., 10.)
@@ -59,6 +64,9 @@ func SetBody2InWorld(world *box2d.B2World) *box2d.B2Body {
 		X: 0,
 		Y: 1,
 	})
+	body.SetUserData(map[string]any{
+		"id": 2,
+	})
 
 	return body
 }
@@ -66,8 +74,12 @@ func SetBody2InWorld(world *box2d.B2World) *box2d.B2Body {
 func SetBody3InWorld(world *box2d.B2World) *box2d.B2Body {
 	bodyDef := box2d.NewB2BodyDef() // 刚体实例化
 	bodyDef.Type = box2d.B2BodyType.B2_kinematicBody
+	// 设置位置 cpp_compliance_test.go:166
 	bodyDef.Position.Set(0., 0.)
 	body := world.CreateBody(bodyDef)
+	mass := box2d.NewMassData()
+	mass.Mass = 10
+	body.SetMassData(mass)
 
 	dynBox := box2d.NewB2PolygonShape()
 	dynBox.SetAsBox(15., 15.)
@@ -82,7 +94,6 @@ func SetBody3InWorld(world *box2d.B2World) *box2d.B2Body {
 	// 是否为传感器：当设置为 true 时，刚体发生碰撞的时候并不会发生碰撞响应（反弹），但是会接收到碰撞的信号，所以该属性可以理解为传感器。
 	fixDef.SetSensor(false)
 	fixDef.M_shape = dynBox
-	// 设置位置 cpp_compliance_test.go:166
 
 	body.CreateFixture(fixDef.M_shape, fixDef.M_density) // 为 body 套上材质
 
@@ -90,21 +101,32 @@ func SetBody3InWorld(world *box2d.B2World) *box2d.B2Body {
 		X: 0,
 		Y: 100,
 	})
+	body.SetUserData(map[string]any{
+		"id": 3,
+	})
 
 	return body
 }
 
-// todo
-func SetGround(world *box2d.B2World) {
-	bodyDef := box2d.NewB2BodyDef()
-	bodyDef.Position.Set(0., 0.)
+type LocalContactListener struct{}
 
-	world.CreateBody(bodyDef)
+func (_this *LocalContactListener) BeginContact(contact box2d.B2ContactInterface) {
+	log.Printf("[BeginContact] ...")
+}
+func (_this *LocalContactListener) EndContact(contact box2d.B2ContactInterface) {
+
+}
+func (_this *LocalContactListener) PreSolve(contact box2d.B2ContactInterface, oldManifold box2d.B2Manifold) {
+
+}
+func (_this *LocalContactListener) PostSolve(contact box2d.B2ContactInterface, impulse *box2d.B2ContactImpulse) {
+
 }
 
 // world 的 hello world 示例。物体的运动
 func TestHelloWorld1(t *testing.T) {
 	var timeStep float64 = 1. / 60.
+	timeStep = 20.
 	world := GetWorld()
 	SetBody2InWorld(world)
 	SetBody3InWorld(world)
@@ -119,19 +141,26 @@ func TestHelloWorld1(t *testing.T) {
 		// positionIterations 是对位置的纠正程度, 越高计算量越大.
 		var positionIterations = 2
 		world.Step(timeStep, velocityIterations, positionIterations)
-		// world.ClearForces()
+		//world.ClearForces()
 	}
+	world.SetContactListener(&LocalContactListener{})
 	for i := 0; i < 1000; i++ {
 		animate()
 
 		bodys := world.GetBodyList()
-		list := bodys.M_fixtureList
-		for body := list.GetBody(); body != nil; body = body.GetNext() {
-			body.SetTransform(body.GetPosition(), body.GetAngle())
-			for cc := body.GetContactList(); cc != nil; cc = cc.Next {
-				fmt.Printf("body v: %v \n", cc.Contact)
+		for fObj := bodys.GetFixtureList().GetBody(); fObj != nil; fObj = fObj.GetNext() {
+			userData := fObj.GetUserData().(map[string]any)
+			bodyId := userData["id"]
+			fmt.Printf("body id: %v,  x: %v, y: %v \n", bodyId, fObj.GetPosition().X, fObj.GetPosition().Y)
+
+			cl := fObj.GetContactList()
+			if cl != nil {
+				fmt.Printf("GetContactList: %v", cl)
 			}
-			fmt.Printf("body x, %v, y: %v \n", body.GetPosition().X, body.GetPosition().Y)
+		}
+
+		for list := bodys.GetContactList(); list != nil; list = list.Next {
+			fmt.Printf("body v: %v \n", list.Contact)
 		}
 
 		for cnArr := world.GetContactList(); cnArr != nil; cnArr.GetNext() {
